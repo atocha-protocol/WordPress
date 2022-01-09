@@ -1,0 +1,56 @@
+version: "3.2"
+
+services:
+  wp_http:
+    container_name: atocha-wp-http
+    image: nginx:latest
+    restart: always
+    ports:
+      - "6080:80"
+      - "6443:443"
+    volumes:
+      - ./.wp-nginx-conf.d:/etc/nginx/conf.d
+      - .:/usr/share/nginx/html
+    networks:
+      - web_network
+  wp_php:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.php.yml
+    container_name: atocha-wp-php
+    image: atocha-protocol/wp-php
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - .:/var/www/html
+    networks:
+      - web_network
+#    tty: true
+  wp_db:
+    container_name: atocha-wp-db
+    image: mysql:5.7
+    restart: always
+    ports:
+      - "3306:3306"
+    volumes:
+      - "./db-data:/var/lib/mysql"
+      - "./mysql.cnf:/etc/my.cnf"
+      - "./db-init:/docker-entrypoint-initdb.d/"
+    env_file: # https://dev.mysql.com/doc/refman/5.7/en/environment-variables.html
+      - ../.mysql.env
+    networks:
+      - web_network
+  wp_phpmyadmin:
+    image: phpmyadmin:latest
+    restart: always
+    ports:
+      - 6081:80
+    environment:
+      PMA_HOST: "wp_db"
+      PMA_PORT: "3306"
+    networks:
+      - web_network
+networks:
+  web_network:
+    driver: bridge
